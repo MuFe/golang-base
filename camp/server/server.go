@@ -1,8 +1,9 @@
 package server
 
 import (
+	"github.com/mufe/golang-base/camp/util"
 	"os"
-	"video_service/camp/utils"
+
 
 	"github.com/gin-gonic/gin"
 	"github.com/mufe/golang-base/camp/xlog"
@@ -13,31 +14,31 @@ var s *server
 type server struct {
 	r *gin.Engine
 
-	apis []utils.HttpApi
+	apis []util.HttpApi
 }
 
 // Get 注册api
 func Get(path string, funcs ...gin.HandlerFunc) {
 	s.r.GET(path, funcs...)
-	s.apis = append(s.apis, utils.HttpApi{Pattern: path})
+	s.apis = append(s.apis, util.HttpApi{Pattern: path})
 }
 
 // Post 注册api
 func Post(path string, funcs ...gin.HandlerFunc) {
 	s.r.POST(path, funcs...)
-	s.apis = append(s.apis, utils.HttpApi{Pattern: path})
+	s.apis = append(s.apis, util.HttpApi{Pattern: path})
 }
 
 // Put 注册api
 func Put(path string, funcs ...gin.HandlerFunc) {
 	s.r.PUT(path, funcs...)
-	s.apis = append(s.apis, utils.HttpApi{Pattern: path})
+	s.apis = append(s.apis, util.HttpApi{Pattern: path})
 }
 
 // Delete 注册api
 func Delete(path string, funcs ...gin.HandlerFunc) {
 	s.r.DELETE(path, funcs...)
-	s.apis = append(s.apis, utils.HttpApi{Pattern: path})
+	s.apis = append(s.apis, util.HttpApi{Pattern: path})
 }
 
 func init() {
@@ -57,7 +58,7 @@ func init() {
 
 // Start 开启服务
 func Start(port string) {
-	go utils.KongRegister{}.StartRegister(s.apis, "")
+	go util.KongRegister{}.StartRegister(s.apis, "")
 	s.r.Run(":" + port)
 }
 
