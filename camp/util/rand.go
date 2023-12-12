@@ -1,4 +1,4 @@
-package utils
+package util
 
 import (
 	"github.com/mufe/golang-base/camp/xlog"

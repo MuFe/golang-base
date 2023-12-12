@@ -1,4 +1,4 @@
-package utils
+package util
 
 //code->pinyin mapping table
 /*

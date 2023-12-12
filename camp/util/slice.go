@@ -1,4 +1,4 @@
-package utils
+package util
 
 // InArray 数组是否包含某元素
 func InArray(strif interface{}, arrayif interface{}) bool {
