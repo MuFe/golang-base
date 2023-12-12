@@ -45,7 +45,7 @@ func NewBuilder() resolver.Builder {
 func (cb *consulBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
 	name:=""
 	tag:=""
-	temp:=strings.Split(target.Endpoint,"/")
+	temp:=strings.Split(target.Endpoint(),"/")
 	if len(temp)>1{
 		name=temp[0]
 		tag=temp[1]
@@ -53,7 +53,7 @@ func (cb *consulBuilder) Build(target resolver.Target, cc resolver.ClientConn, o
 		name=temp[0]
 	}
 	cr := &consulResolver{
-		address:              target.Authority,
+		address:              target.URL.String(),
 		name:                 name,
 		cc:                   cc,
 		tag:                  tag,
