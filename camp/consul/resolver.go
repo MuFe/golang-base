@@ -53,7 +53,7 @@ func (cb *consulBuilder) Build(target resolver.Target, cc resolver.ClientConn, o
 		name=temp[0]
 	}
 	cr := &consulResolver{
-		address:              target.URL.String(),
+		address:              target.URL.Host,
 		name:                 name,
 		cc:                   cc,
 		tag:                  tag,
