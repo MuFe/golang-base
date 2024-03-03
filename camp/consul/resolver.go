@@ -43,14 +43,14 @@ func NewBuilder() resolver.Builder {
 }
 
 func (cb *consulBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts resolver.BuildOptions) (resolver.Resolver, error) {
-	name:=""
-	tag:=""
-	temp:=strings.Split(target.Endpoint(),"/")
-	if len(temp)>1{
-		name=temp[0]
-		tag=temp[1]
-	}else{
-		name=temp[0]
+	name := ""
+	tag := ""
+	temp := strings.Split(target.Endpoint(), "/")
+	if len(temp) > 1 {
+		name = temp[0]
+		tag = temp[1]
+	} else {
+		name = temp[0]
 	}
 	cr := &consulResolver{
 		address:              target.URL.Host,
@@ -75,21 +75,20 @@ func (cr *consulResolver) watcher() {
 		fmt.Printf("error create consul client: %v\n", err)
 		return
 	}
-
 	for {
 		services, metainfo, err := client.Health().Service(cr.name, cr.tag, true, &api.QueryOptions{WaitIndex: cr.lastIndex})
 		if err != nil {
 			fmt.Printf("error retrieving instances from Consul: %v", err)
+		} else {
+			cr.lastIndex = metainfo.LastIndex
+			var newAddrs []resolver.Address
+			for _, service := range services {
+				addr := fmt.Sprintf("%v:%v", service.Service.Address, service.Service.Port)
+				newAddrs = append(newAddrs, resolver.Address{Addr: addr})
+			}
+			cr.cc.NewAddress(newAddrs)
+			cr.cc.NewServiceConfig(cr.name)
 		}
-
-		cr.lastIndex = metainfo.LastIndex
-		var newAddrs []resolver.Address
-		for _, service := range services {
-			addr := fmt.Sprintf("%v:%v", service.Service.Address, service.Service.Port)
-			newAddrs = append(newAddrs, resolver.Address{Addr: addr})
-		}
-		cr.cc.NewAddress(newAddrs)
-		cr.cc.NewServiceConfig(cr.name)
 	}
 
 }
@@ -103,4 +102,3 @@ func (cr *consulResolver) ResolveNow(opt resolver.ResolveNowOptions) {
 
 func (cr *consulResolver) Close() {
 }
-
