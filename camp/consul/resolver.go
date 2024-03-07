@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
@@ -75,22 +76,39 @@ func (cr *consulResolver) watcher() {
 		fmt.Printf("error create consul client: %v\n", err)
 		return
 	}
-	for {
-		services, metainfo, err := client.Health().Service(cr.name, cr.tag, true, &api.QueryOptions{WaitIndex: cr.lastIndex})
-		if err != nil {
-			fmt.Printf("error retrieving instances from Consul: %v", err)
-		} else {
-			cr.lastIndex = metainfo.LastIndex
-			var newAddrs []resolver.Address
-			for _, service := range services {
-				addr := fmt.Sprintf("%v:%v", service.Service.Address, service.Service.Port)
-				newAddrs = append(newAddrs, resolver.Address{Addr: addr})
-			}
-			cr.cc.NewAddress(newAddrs)
-			cr.cc.NewServiceConfig(cr.name)
-		}
-	}
 
+	retryLimit := 5 // 设置重试次数限制
+	retryCount := 0 // 初始化重试次数
+
+	for {
+		if retryCount >= retryLimit {
+			fmt.Println("reached retry limit, exiting watcher")
+			return // 达到重试次数限制，退出函数
+		}
+
+		services, metainfo, err := client.Health().Service(cr.name, cr.tag, true, &api.QueryOptions{
+			WaitIndex: cr.lastIndex,
+			WaitTime:  time.Minute,
+		})
+		if err != nil {
+			fmt.Printf("error retrieving instances from Consul: %v\n", err)
+			retryCount++                 // 错误时增加重试次数
+			time.Sleep(time.Second * 10) // 在下次重试前等待
+			continue                     // 继续下一轮重试
+		}
+
+		// 成功获取到服务信息时重置重试次数
+		retryCount = 0
+
+		cr.lastIndex = metainfo.LastIndex
+		var newAddrs []resolver.Address
+		for _, service := range services {
+			addr := fmt.Sprintf("%v:%v", service.Service.Address, service.Service.Port)
+			newAddrs = append(newAddrs, resolver.Address{Addr: addr})
+		}
+		cr.cc.NewAddress(newAddrs)
+		cr.cc.NewServiceConfig(cr.name)
+	}
 }
 
 func (cb *consulBuilder) Scheme() string {
