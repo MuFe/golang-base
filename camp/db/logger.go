@@ -97,7 +97,6 @@ func valuesToInterface(vals []driver.Value) []interface{} {
 	return values
 }
 
-// 输出日志函数，可替换成你自己的日志库
 func logSQL(tag, sql string, duration time.Duration, err error) {
 	slow := ""
 	if duration > SlowThreshold {
