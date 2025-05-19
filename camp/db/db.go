@@ -6,26 +6,29 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/mufe/golang-base/camp/xlog"
 	"golang.org/x/crypto/ssh"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-	"github.com/mufe/golang-base/camp/xlog"
-	_ "github.com/go-sql-driver/mysql"
 )
 
 type ViaSSHDialer struct {
 	client *ssh.Client
-	_ *context.Context
+	_      *context.Context
 }
 
-func (self *ViaSSHDialer) Dial(context context.Context,addr string) (net.Conn, error) {
+func (self *ViaSSHDialer) Dial(context context.Context, addr string) (net.Conn, error) {
 	return self.client.Dial("tcp", addr)
 }
+
 type remoteScriptType byte
 type remoteShellType byte
 
@@ -39,7 +42,7 @@ const (
 )
 
 type Db struct {
-	db *sql.DB
+	db    *sql.DB
 	Print bool
 }
 
@@ -49,6 +52,7 @@ type Client struct {
 
 // DialWithPasswd starts a client connection to the given SSH server with passwd authmethod.
 func DialWithPasswd(addr, user, passwd string) (*Client, error) {
+
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: []ssh.AuthMethod{
@@ -382,7 +386,6 @@ func (rs *remoteShell) Start() error {
 	return nil
 }
 
-
 func (s *Db) Connect(host string, port int, user, pwd, database string) error {
 	var err error
 	path := strings.Join([]string{user, ":", pwd, "@tcp(", host, ":", strconv.Itoa(port), ")/", database, "?charset=utf8mb4"}, "")
@@ -390,6 +393,12 @@ func (s *Db) Connect(host string, port int, user, pwd, database string) error {
 	if err != nil {
 		xlog.ErrorP(err)
 		return err
+	}
+	if s.Print {
+		err := mysql.SetLogger(log.New(os.Stdout, "[MySQL] ", log.LstdFlags|log.Lshortfile))
+		if err != nil {
+			return err
+		}
 	}
 	s.db.SetMaxOpenConns(200)
 	s.db.SetMaxIdleConns(100)
@@ -399,7 +408,7 @@ func (s *Db) Connect(host string, port int, user, pwd, database string) error {
 func (s *Db) Query(sql string, args ...interface{}) (rows *sql.Rows, err error) {
 	t := time.Now()
 	rows, err = s.db.Query(sql, args...)
-	if s.Print{
+	if s.Print {
 		xlog.DB(false, time.Now().Sub(t), 0, sql, args...)
 	}
 	if err != nil {
@@ -408,12 +417,10 @@ func (s *Db) Query(sql string, args ...interface{}) (rows *sql.Rows, err error) 
 	return rows, err
 }
 
-
-
 func (s *Db) QueryRow(sql string, args ...interface{}) (result *sql.Row) {
 	t := time.Now()
 	result = s.db.QueryRow(sql, args...)
-	if s.Print{
+	if s.Print {
 		xlog.DB(false, time.Now().Sub(t), 0, sql, args...)
 	}
 	return result
@@ -428,16 +435,15 @@ func (s *Db) Exec(sql string, args ...interface{}) (result sql.Result, err error
 	} else {
 		xlog.ErrorP(err)
 	}
-	if s.Print{
+	if s.Print {
 		xlog.DB(true, time.Now().Sub(t), affected, sql, args...)
 	}
 	return result, err
 }
 
-
 func (s *Db) WithTransaction(f func(tx *Tx) error) error {
 	var t = &Tx{
-		Print:s.Print,
+		Print: s.Print,
 	}
 	var err error
 	t.tx, err = s.db.Begin()
@@ -467,4 +473,3 @@ func (s *Db) WithTransaction(f func(tx *Tx) error) error {
 	success = true
 	return nil
 }
-
