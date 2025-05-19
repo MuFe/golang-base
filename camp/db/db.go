@@ -6,13 +6,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/mufe/golang-base/camp/xlog"
 	"golang.org/x/crypto/ssh"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -388,18 +386,21 @@ func (rs *remoteShell) Start() error {
 
 func (s *Db) Connect(host string, port int, user, pwd, database string) error {
 	var err error
+	diverName := "mysql"
+	if s.Print {
+		diverName = "mysql-with-logger"
+		SetSlowThreshold(300 * time.Millisecond)
+		// 注册驱动
+		RegisterWithLogging()
+	}
+
 	path := strings.Join([]string{user, ":", pwd, "@tcp(", host, ":", strconv.Itoa(port), ")/", database, "?charset=utf8mb4"}, "")
-	s.db, err = sql.Open("mysql", path)
+	s.db, err = sql.Open(diverName, path)
 	if err != nil {
 		xlog.ErrorP(err)
 		return err
 	}
-	if s.Print {
-		err := mysql.SetLogger(log.New(os.Stdout, "[MySQL] ", log.LstdFlags|log.Lshortfile))
-		if err != nil {
-			return err
-		}
-	}
+
 	s.db.SetMaxOpenConns(200)
 	s.db.SetMaxIdleConns(100)
 	return nil

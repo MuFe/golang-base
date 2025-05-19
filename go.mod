@@ -7,6 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/hashicorp/consul/api v1.26.1
+	github.com/ngrok/sqlmw v0.0.0-20220520173518-97c9c04efc79
 	golang.org/x/crypto v0.16.0
 	golang.org/x/text v0.14.0
 	google.golang.org/grpc v1.59.0
