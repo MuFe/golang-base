@@ -81,9 +81,9 @@ func (d *wrappedDriver) Open(name string) (driver.Conn, error) {
 	}
 
 	return &wrappedConn{
-		Conn:               conn,
+		Conn:              conn,
 		ConnPrepareContext: cpCtx,
-		ConnBeginTx:        cbTx,
+		ConnBeginTx:       cbTx,
 	}, nil
 }
 
