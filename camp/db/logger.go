@@ -27,6 +27,28 @@ func (l Logger) ExecContext(ctx context.Context, conn driver.ExecerContext, quer
 	return res, err
 }
 
+func (l Logger) Exec(conn driver.Execer, query string, args []driver.Value) (driver.Result, error) {
+	start := time.Now()
+	res, err := conn.Exec(query, args)
+	duration := time.Since(start)
+
+	sqlStr := InterpolateSQL(query, valuesToInterface(args)...)
+	logSQL("[EXEC]", sqlStr, duration, err)
+
+	return res, err
+}
+
+func (l Logger) Query(conn driver.Queryer, query string, args []driver.Value) (driver.Rows, error) {
+	start := time.Now()
+	rows, err := conn.Query(query, args)
+	duration := time.Since(start)
+
+	sqlStr := InterpolateSQL(query, valuesToInterface(args)...)
+	logSQL("[QUERY]", sqlStr, duration, err)
+
+	return rows, err
+}
+
 func (l Logger) QueryContext(ctx context.Context, conn driver.QueryerContext, query string, args []driver.NamedValue) (driver.Rows, error) {
 	start := time.Now()
 	rows, err := conn.QueryContext(ctx, query, args)
@@ -79,11 +101,21 @@ func (d *wrappedDriver) Open(name string) (driver.Conn, error) {
 	if v, ok := conn.(driver.ConnBeginTx); ok {
 		cbTx = v
 	}
+	var execerCtx driver.ExecerContext
+	if v, ok := conn.(driver.ExecerContext); ok {
+		execerCtx = v
+	}
+	var queryCtx driver.QueryerContext
+	if v, ok := conn.(driver.QueryerContext); ok {
+		queryCtx = v
+	}
 
 	return &wrappedConn{
-		Conn:              conn,
+		Conn:               conn,
 		ConnPrepareContext: cpCtx,
-		ConnBeginTx:       cbTx,
+		ConnBeginTx:        cbTx,
+		ExecerContext:      execerCtx,
+		QueryerContext:     queryCtx,
 	}, nil
 }
 
@@ -92,6 +124,8 @@ type wrappedConn struct {
 	driver.Conn
 	driver.ConnPrepareContext
 	driver.ConnBeginTx
+	driver.ExecerContext
+	driver.QueryerContext
 }
 
 func (c *wrappedConn) PrepareContext(ctx context.Context, query string) (driver.Stmt, error) {
@@ -168,7 +202,6 @@ func (s *loggedStmt) ExecContext(ctx context.Context, args []driver.NamedValue) 
 	execCtx := s.Stmt.(driver.StmtExecContext)
 	res, err := execCtx.ExecContext(ctx, args)
 	duration := time.Since(start)
-
 	sqlStr := InterpolateSQL(s.query, namedValueToInterface(args)...)
 	logSQL("[STMT-EXEC-CONTEXT]", sqlStr, duration, err)
 
@@ -193,6 +226,32 @@ func valuesToInterface(vals []driver.Value) []interface{} {
 		values[i] = v
 	}
 	return values
+}
+
+func (c *wrappedConn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	start := time.Now()
+
+	execerCtx := c.Conn.(driver.ExecerContext)
+	res, err := execerCtx.ExecContext(ctx, query, args)
+
+	duration := time.Since(start)
+	sqlStr := InterpolateSQL(query, namedValueToInterface(args)...)
+	logSQL("[CONN-EXEC-CONTEXT]", sqlStr, duration, err)
+
+	return res, err
+}
+
+func (c *wrappedConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	start := time.Now()
+
+	queryerCtx := c.Conn.(driver.QueryerContext)
+	rows, err := queryerCtx.QueryContext(ctx, query, args)
+
+	duration := time.Since(start)
+	sqlStr := InterpolateSQL(query, namedValueToInterface(args)...)
+	logSQL("[CONN-QUERY-CONTEXT]", sqlStr, duration, err)
+
+	return rows, err
 }
 
 // RegisterWithLogging 注册带日志拦截的自定义驱动

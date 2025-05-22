@@ -3,11 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/mufe/golang-base/camp/xlog"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"net"
 	"os"
 	"runtime/debug"
-	"github.com/mufe/golang-base/camp/xlog"
 )
 
 var s *server
@@ -27,11 +28,34 @@ func init() {
 				xlog.Errorf("%+v\n%s", e, string(debug.Stack()))
 			}
 		}()
+		clientIP := GetClientIPFromMetadata(ctx)
+		if clientIP != "" {
+			ctx = context.WithValue(ctx, "client-ip", clientIP)
+		}
 		return handler(ctx, req)
 	}
 	opts = append(opts, grpc.UnaryInterceptor(interceptor))
 	r := grpc.NewServer(opts...)
 	s = &server{r: r}
+}
+func GetClientIPFromMetadata(ctx context.Context) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ""
+	}
+	if ips := md.Get("client-ip"); len(ips) > 0 {
+		return ips[0]
+	}
+	// 可选 fallback
+	if ips := md.Get("x-forwarded-for"); len(ips) > 0 {
+		return ips[0]
+	}
+	return ""
+}
+
+func GetClientIPFromCtx(ctx context.Context) string {
+	ip, _ := ctx.Value("client-ip").(string)
+	return ip
 }
 
 func GetRegisterRpc() *grpc.Server {
