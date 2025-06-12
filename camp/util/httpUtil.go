@@ -86,12 +86,14 @@ func GetRPCServiceBase(consulIp string) (*grpc.ClientConn, error) {
 
 // 获取rpc服务(服务发现)
 func GetRPCService(name string, tag string, consulIp string) (*grpc.ClientConn, error) {
-	url := fmt.Sprintf("%s://%s/%s/%s", "consul", consulIp, name, tag)
+	url := fmt.Sprintf("consul://%s/%s?tag=%s", consulIp, name, tag)
+	xlog.Info(url)
 	conn, err := grpc.Dial(url, grpc.WithInsecure(), grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, roundrobin.Name)), grpc.WithBlock())
 	if err != nil {
 		xlog.ErrorP(err)
 		return nil, err
 	}
+
 	return conn, err
 }
 
