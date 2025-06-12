@@ -3,7 +3,7 @@ package util
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/mufe/golang-base/camp/consul"
+	_ "github.com/mbobakov/grpc-consul-resolver"
 	"github.com/mufe/golang-base/camp/xlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer/roundrobin"
@@ -22,7 +22,6 @@ func IsMiniProgram(c *gin.Context) bool {
 func GetHeaderFromKey(c *gin.Context, key string) string {
 	return c.GetHeader(key)
 }
-
 
 func GetInt32ValueFromReq(c *gin.Context, key string) int32 {
 	return FormatStrToInt32(c.Query(key))
@@ -57,9 +56,9 @@ func FormatStrToInt64(str string) int64 {
 }
 
 type BaseResult struct {
-	Total int64         `json:"total"`
+	Total   int64         `json:"total"`
 	Current int64         `json:"current"`
-	List  []interface{} `json:"list"`
+	List    []interface{} `json:"list"`
 }
 
 func CreateListResultReturn(total int64, list []interface{}) BaseResult {
@@ -68,15 +67,15 @@ func CreateListResultReturn(total int64, list []interface{}) BaseResult {
 		List:  list,
 	}
 }
-func CreateListCurrentResultReturn(total ,current int64, list []interface{}) BaseResult {
+func CreateListCurrentResultReturn(total, current int64, list []interface{}) BaseResult {
 	return BaseResult{
-		Total: total,
+		Total:   total,
 		Current: current,
-		List:  list,
+		List:    list,
 	}
 }
 
-//获取rpc服务(服务发现)
+// 获取rpc服务(服务发现)
 func GetRPCServiceBase(consulIp string) (*grpc.ClientConn, error) {
 	conn, err := grpc.Dial(consulIp, grpc.WithInsecure())
 	if err != nil {
@@ -85,12 +84,10 @@ func GetRPCServiceBase(consulIp string) (*grpc.ClientConn, error) {
 	return conn, err
 }
 
-
-//获取rpc服务(服务发现)
+// 获取rpc服务(服务发现)
 func GetRPCService(name string, tag string, consulIp string) (*grpc.ClientConn, error) {
-	consul.NewInit()
-	url:=fmt.Sprintf("%s://%s/%s/%s", "consul", consulIp,name,tag)
-	conn, err := grpc.Dial(url, grpc.WithInsecure(),  grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, roundrobin.Name)), grpc.WithBlock())
+	url := fmt.Sprintf("%s://%s/%s/%s", "consul", consulIp, name, tag)
+	conn, err := grpc.Dial(url, grpc.WithInsecure(), grpc.WithDefaultServiceConfig(fmt.Sprintf(`{"LoadBalancingPolicy": "%s"}`, roundrobin.Name)), grpc.WithBlock())
 	if err != nil {
 		xlog.ErrorP(err)
 		return nil, err
